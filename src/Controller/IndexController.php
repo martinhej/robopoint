@@ -8,7 +8,7 @@ class IndexController extends Controller
 {
     public function index() {
         return $this->render('index.html.twig', array(
-            'rm' => 'robomaze',
+            'rp' => 'robopoint',
         ));
     }
 
