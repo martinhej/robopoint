@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Controller\WebContent;
+namespace robopoint\Controller\WebContent;
 
 use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 
