@@ -29,13 +29,20 @@ class RobopointConsumerRecovery implements ConsumerRecoveryInterface {
     protected $streamName;
 
     /**
+     * @var string
+     */
+    protected $filterClass;
+
+    /**
      * RobopointConsumerRecovery constructor.
      * @param ConfigInterface $config
-     * @param $robo_id
+     * @param string $robo_id
+     * @param string $filter_class
      */
-    public function __construct(ConfigInterface $config, $robo_id) {
+    public function __construct(ConfigInterface $config, $robo_id, $filter_class) {
         $this->config = $config;
         $this->roboId = $robo_id;
+        $this->filterClass = $filter_class;
         $this->streamName = $config->getStreamName();
     }
 
@@ -44,7 +51,7 @@ class RobopointConsumerRecovery implements ConsumerRecoveryInterface {
      */
     public function hasRecoveryData() {
         $content = $this->getRecoveryFileContent();
-        return isset($content[$this->streamName][$this->roboId]);
+        return isset($content[$this->streamName][$this->roboId][$this->filterClass]);
     }
 
     /**
@@ -53,8 +60,8 @@ class RobopointConsumerRecovery implements ConsumerRecoveryInterface {
     public function getLastSequenceNumber($shard_id) {
         $content = $this->getRecoveryFileContent();
 
-        if (isset($content[$this->streamName][$this->roboId][$shard_id])) {
-            return $content[$this->streamName][$this->roboId][$shard_id];
+        if (isset($content[$this->streamName][$this->roboId][$this->filterClass][$shard_id])) {
+            return $content[$this->streamName][$this->roboId][$this->filterClass][$shard_id];
         }
 
         return NULL;
@@ -65,7 +72,7 @@ class RobopointConsumerRecovery implements ConsumerRecoveryInterface {
      */
     public function storeLastSuccessPosition($shard_id, $sequence_number) {
         $content = $this->getRecoveryFileContent();
-        $content[$this->streamName][$this->roboId][$shard_id] = $sequence_number;
+        $content[$this->streamName][$this->roboId][$this->filterClass][$shard_id] = $sequence_number;
 
         $write_result = file_put_contents($this->getConfig()->getRecoveryConsumerRecoveryFile(), json_encode($content));
 

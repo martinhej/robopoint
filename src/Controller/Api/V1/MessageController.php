@@ -4,11 +4,14 @@ namespace robopoint\Controller\Api\V1;
 
 use robocloud\Config\DefaultConfig;
 use robocloud\Event\KinesisConsumerInMemoryErrorLogger;
+use robocloud\Exception\InvalidMessageClassException;
+use robocloud\Exception\InvalidMessageDataException;
 use robocloud\Kinesis\Client\Consumer;
 use robocloud\Kinesis\Client\Producer;
 use robocloud\KinesisClientFactory;
 use robocloud\Message\Message;
 use robocloud\Message\MessageFactory;
+use robocloud\Message\MessageSchemaValidator;
 use robocloud\MessageProcessing\Backend\KeepInMemoryBackend;
 use robocloud\MessageProcessing\Filter\FilterByPurpose;
 use robocloud\MessageProcessing\Filter\FilterByRoboId;
@@ -22,6 +25,7 @@ use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 use Symfony\Component\EventDispatcher\EventDispatcher;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 
 /**
  * @Route ("/api/v1/messages")
@@ -36,23 +40,31 @@ class MessageController extends Controller {
     /**
      * @var KinesisConsumerInMemoryErrorLogger
      */
-    protected $errorLogger;
+    protected $kinesisErrorHandler;
 
     /**
      * @var EventDispatcher
      */
     protected $eventDispatcher;
 
+    /**
+     * @var DefaultConfig
+     */
     protected $robocloudConfig;
 
     /**
      * MessageController constructor.
      */
     public function __construct() {
-        $this->backend = new KeepInMemoryBackend();
-        $this->errorLogger = new KinesisConsumerInMemoryErrorLogger();
-        $this->eventDispatcher = new EventDispatcher();
+
         $this->robocloudConfig = new DefaultConfig(__DIR__ . '/../../../../config/robocloud.yaml');
+
+        $this->kinesisErrorHandler = new KinesisConsumerInMemoryErrorLogger();
+        $this->eventDispatcher = new EventDispatcher();
+        $this->eventDispatcher->addSubscriber($this->kinesisErrorHandler);
+        $this->eventDispatcher->addSubscriber(new MessageSchemaValidator($this->getRobocloudConfig()));
+
+        $this->backend = new KeepInMemoryBackend();
     }
 
     /**
@@ -69,14 +81,7 @@ class MessageController extends Controller {
 
         if (empty($payload)) {
             return new JsonResponse([
-                'errors' => ['Empty payload'],
-            ], 400);
-        }
-//        $payload = json_decode($payload);
-
-        if (!is_array($payload)) {
-            return new JsonResponse([
-                'errors' => ['Malformed request data.'],
+                'errors' => ['The request does not contain the expected "messages" offset.'],
             ], 400);
         }
 
@@ -87,27 +92,53 @@ class MessageController extends Controller {
             $this->getEventDispatcher()
         );
 
+        $response = [];
+
         try {
-            foreach ($payload as $message) {
-                $producer->add($this->getMessageFactory()->setMessageData($message)->createMessage());
+            foreach ($payload as $data) {
+                $message = $this->getMessageFactory()->setMessageData($data)->createMessage();
+                $producer->add($message);
+                $message_array = $message->jsonSerialize();
+                $response[] = [
+                    'messageId' => $message_array['messageId'],
+                    'messageTime' => $message_array['messageTime'],
+                ];
             }
         }
-        catch (\Exception $e) {
+        catch (InvalidMessageDataException $e) {
             return new JsonResponse([
-                'errors' => ['Invalid message data provided'],
+                'errors' => [
+                    [
+                        'message' => 'Invalid message data provided.',
+                        'data' => [$data],
+                    ],
+                ],
             ], 400);
         }
+        catch (InvalidMessageClassException $e) {
+            // @todo - log.
+            return new JsonResponse(['errors' => [
+                ['message' => 'System error.'],
+            ]], 500);
+        }
+        catch (\InvalidArgumentException $e) {
+            // @todo - log.
+            return new JsonResponse(['errors' => [
+                ['message' => 'System error.'],
+            ]], 500);
+        }
 
-        $result = $producer->pushAll();
+        $producer->pushAll();
 
-        if ($errors = $this->errorLogger->getErrors()) {
-            return new JsonResponse(['errors' => array_map(function ($error) {
-                return $error['message'];
-            }, $errors)], 500);
+        if ($errors = $this->kinesisErrorHandler->getErrors()) {
+            // @todo - log.
+            return new JsonResponse(['errors' => [
+                ['message' => 'System error.'],
+            ]], 500);
         }
 
         return new JsonResponse([
-            'received' => $result,
+            'messages' => $response,
         ]);
     }
 
@@ -145,34 +176,36 @@ class MessageController extends Controller {
      * @param FilterInterface $filter
      *
      * @return JsonResponse
-     *
-     * @todo - add logging, provide client with meaningful messages.
      */
     protected function readMessages($roboId, FilterInterface $filter) {
 
         $transformer = new KeepOriginalTransformer();
         $this->getEventDispatcher()->addSubscriber(new DefaultProcessor($filter, $transformer, $this->getBackend()));
-        $this->getEventDispatcher()->addSubscriber($this->errorLogger);
+        $this->getEventDispatcher()->addSubscriber($this->kinesisErrorHandler);
 
         $consumer = new Consumer(
             $this->getKinesisClient('consumer'),
             $this->getRobocloudConfig()->getStreamName(),
             $this->getMessageFactory(),
             $this->getEventDispatcher(),
-            new RobopointConsumerRecovery($this->getRobocloudConfig(), $roboId)
+            new RobopointConsumerRecovery($this->getRobocloudConfig(), $roboId, get_class($filter))
         );
 
         try {
             $consumer->consume(0);
         }
         catch (\Exception $e) {
-            return new JsonResponse(['errors' => [$e->getMessage()]], 500);
+            // @todo - log.
+            return new JsonResponse(['errors' => [
+                ['message' => 'System error.'],
+            ]], 500);
         }
 
-        if ($errors = $this->errorLogger->getErrors()) {
-            return new JsonResponse(['errors' => array_map(function ($error) {
-                return $error['message'];
-            }, $errors)], 500);
+        if ($errors = $this->kinesisErrorHandler->getErrors()) {
+            // @todo - log.
+            return new JsonResponse(['errors' => [
+                ['message' => 'System error.'],
+            ]], 500);
         }
 
         $messages = $this->getBackend()->flush();
@@ -190,10 +223,17 @@ class MessageController extends Controller {
         return new MessageFactory(Message::class, $this->getEventDispatcher());
     }
 
+    /**
+     * @return EventDispatcher
+     */
     public function getEventDispatcher() {
         return $this->eventDispatcher;
     }
 
+    /**
+     * @param $type
+     * @return \Aws\Kinesis\KinesisClient
+     */
     public function getKinesisClient($type) {
         $factory = new KinesisClientFactory($this->getRobocloudConfig());
         return $factory->getKinesisClient($type);
@@ -210,9 +250,9 @@ class MessageController extends Controller {
     /**
      * @return KinesisConsumerInMemoryErrorLogger
      */
-    public function getErrorLogger(): KinesisConsumerInMemoryErrorLogger
+    public function getKinesisErrorHandler(): KinesisConsumerInMemoryErrorLogger
     {
-        return $this->errorLogger;
+        return $this->kinesisErrorHandler;
     }
 
     /**
@@ -222,7 +262,5 @@ class MessageController extends Controller {
     {
         return $this->robocloudConfig;
     }
-
-
 
 }
