@@ -21,8 +21,11 @@
 ###< symfony/web-server-bundle ###
 
 .idea
-config/robocloud.yaml
 # Elastic Beanstalk Files
 .elasticbeanstalk/*
 !.elasticbeanstalk/*.cfg.yml
 !.elasticbeanstalk/*.global.yml
+
+
+.git
+.gitignore
