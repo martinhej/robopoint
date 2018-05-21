@@ -227,7 +227,7 @@ class MessageController extends Controller
             $consumer->consume(0);
         } catch (\Exception $e) {
 
-            $this->container->error($e->getMessage(), $e);
+            $this->logger->error($e->getMessage(), ['exception' => $e]);
 
             return new JsonResponse(['errors' => [
                 ['message' => 'System error.'],

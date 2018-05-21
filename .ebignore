@@ -1,31 +1,26 @@
 
-###> symfony/framework-bundle ###
+# Symfony related
 .env
 /public/bundles/
 /var/
 /vendor/
-###< symfony/framework-bundle ###
-
-###> symfony/webpack-encore-pack ###
 /node_modules/
 /public/build/
-###< symfony/webpack-encore-pack ###
-
-###> symfony/phpunit-bridge ###
 .phpunit
 /phpunit.xml
-###< symfony/phpunit-bridge ###
-
-###> symfony/web-server-bundle ###
 .web-server-pid
-###< symfony/web-server-bundle ###
 
-.idea
+# Robopoint configuration
+/config/packages/dev/robopoint.yaml
+/config/packages/test/robopoint.yaml
+
 # Elastic Beanstalk Files
 .elasticbeanstalk/*
 !.elasticbeanstalk/*.cfg.yml
 !.elasticbeanstalk/*.global.yml
 
 
+# Misc
 .git
 .gitignore
+.idea
