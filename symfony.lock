@@ -128,9 +128,6 @@
     "psr/simple-cache": {
         "version": "1.0.0"
     },
-    "ralouphie/getallheaders": {
-        "version": "2.0.5"
-    },
     "sensio/framework-extra-bundle": {
         "version": "4.0",
         "recipe": {
@@ -278,9 +275,6 @@
             "ref": "41416370e732d1c8e7a0953a5ce815b641cfba0f"
         }
     },
-    "symfony/polyfill-ctype": {
-        "version": "1.8-dev"
-    },
     "symfony/polyfill-intl-icu": {
         "version": "v1.7.0"
     },
@@ -409,5 +403,8 @@
     },
     "zendframework/zend-code": {
         "version": "3.3.0"
+    },
+    "zendframework/zend-eventmanager": {
+        "version": "3.2.1"
     }
 }

@@ -20,9 +20,15 @@
 .web-server-pid
 ###< symfony/web-server-bundle ###
 
-.idea
-config/robocloud.yaml
+# Robopoint configuration files
+config/packages/prod/robopoint.yaml
+config/packages/dev/robopoint.yaml
+config/packages/test/robopoint.yaml
+
 # Elastic Beanstalk Files
 .elasticbeanstalk/*
 !.elasticbeanstalk/*.cfg.yml
 !.elasticbeanstalk/*.global.yml
+
+# Misc
+.idea

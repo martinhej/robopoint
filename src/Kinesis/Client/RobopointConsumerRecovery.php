@@ -14,11 +14,6 @@ use robocloud\Kinesis\Client\ConsumerRecoveryInterface;
 class RobopointConsumerRecovery implements ConsumerRecoveryInterface {
 
     /**
-     * @var ConfigInterface
-     */
-    protected $config;
-
-    /**
      * @var string
      */
     protected $roboId;
@@ -31,19 +26,27 @@ class RobopointConsumerRecovery implements ConsumerRecoveryInterface {
     /**
      * @var string
      */
+    protected $consumerRecoveryFile;
+
+    /**
+     * @var string
+     */
     protected $filterClass;
 
     /**
      * RobopointConsumerRecovery constructor.
-     * @param ConfigInterface $config
-     * @param string $robo_id
-     * @param string $filter_class
+     *
+     * @param $stream_mame
+     * @param $consumer_recovery_file
+     * @param $robo_id
+     * @param $filter_class
      */
-    public function __construct(ConfigInterface $config, $robo_id, $filter_class) {
-        $this->config = $config;
+    public function __construct($stream_mame, $consumer_recovery_file, $robo_id, $filter_class)
+    {
+        $this->streamName = $stream_mame;
+        $this->consumerRecoveryFile = $consumer_recovery_file;
         $this->roboId = $robo_id;
         $this->filterClass = $filter_class;
-        $this->streamName = $config->getStreamName();
     }
 
     /**
@@ -74,10 +77,10 @@ class RobopointConsumerRecovery implements ConsumerRecoveryInterface {
         $content = $this->getRecoveryFileContent();
         $content[$this->streamName][$this->roboId][$this->filterClass][$shard_id] = $sequence_number;
 
-        $write_result = file_put_contents($this->getConfig()->getRecoveryConsumerRecoveryFile(), json_encode($content));
+        $write_result = file_put_contents($this->consumerRecoveryFile, json_encode($content));
 
         if ($write_result === FALSE) {
-            throw new ConsumerRecoveryException('Error writing Consumer recovery data at ' . $this->getConfig()->getRecoveryConsumerRecoveryFile());
+            throw new ConsumerRecoveryException('Error writing Consumer recovery data at ' . $this->consumerRecoveryFile);
         }
     }
 
@@ -91,21 +94,15 @@ class RobopointConsumerRecovery implements ConsumerRecoveryInterface {
      *   On the recovery file read error.
      */
     protected function getRecoveryFileContent() {
-        $content = file_get_contents($this->getConfig()->getRecoveryConsumerRecoveryFile());
+        $content = file_get_contents($this->consumerRecoveryFile);
         if (!empty($content)) {
             return json_decode($content, TRUE);
         }
         elseif ($content === FALSE) {
-            throw new ConsumerRecoveryException('Error reading Consumer recovery data at ' . $this->getConfig()->getRecoveryConsumerRecoveryFile());
+            throw new ConsumerRecoveryException('Error reading Consumer recovery data at ' . $this->consumerRecoveryFile);
         }
 
         return [];
     }
 
-    /**
-     * @return ConfigInterface
-     */
-    public function getConfig() {
-        return $this->config;
-    }
 }

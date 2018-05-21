@@ -9,7 +9,6 @@ doctrine:
         result_cache_driver:
             type: service
             id: doctrine.result_cache_provider
-        auto_mapping: true
 
 services:
     doctrine.result_cache_provider:

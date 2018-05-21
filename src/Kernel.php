@@ -2,6 +2,7 @@
 
 namespace robopoint;
 
+use robopoint\DependencyInjection\RobopointExtension;
 use Symfony\Bundle\FrameworkBundle\Kernel\MicroKernelTrait;
 use Symfony\Component\Config\Loader\LoaderInterface;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
@@ -36,6 +37,9 @@ class Kernel extends BaseKernel
 
     protected function configureContainer(ContainerBuilder $container, LoaderInterface $loader)
     {
+
+        $container->registerExtension(new RobopointExtension());
+
         // Feel free to remove the "container.autowiring.strict_mode" parameter
         // if you are using symfony/dependency-injection 4.0+ as it's the default behavior
         $container->setParameter('container.autowiring.strict_mode', true);
