@@ -1,6 +1,5 @@
 
 # Symfony related
-.env
 /public/bundles/
 /var/
 /vendor/
@@ -9,6 +8,7 @@
 .phpunit
 /phpunit.xml
 .web-server-pid
+.env
 
 # Robopoint configuration
 /config/packages/dev/robopoint.yaml
