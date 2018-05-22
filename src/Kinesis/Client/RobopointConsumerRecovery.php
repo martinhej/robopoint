@@ -31,7 +31,7 @@ class RobopointConsumerRecovery implements ConsumerRecoveryInterface {
     /**
      * @var string
      */
-    protected $filterClass;
+    protected $filter;
 
     /**
      * RobopointConsumerRecovery constructor.
@@ -39,14 +39,14 @@ class RobopointConsumerRecovery implements ConsumerRecoveryInterface {
      * @param $stream_mame
      * @param $consumer_recovery_file
      * @param $robo_id
-     * @param $filter_class
+     * @param $filter
      */
-    public function __construct($stream_mame, $consumer_recovery_file, $robo_id, $filter_class)
+    public function __construct($stream_mame, $consumer_recovery_file, $robo_id, $filter)
     {
         $this->streamName = $stream_mame;
         $this->consumerRecoveryFile = $consumer_recovery_file;
         $this->roboId = $robo_id;
-        $this->filterClass = $filter_class;
+        $this->filter = $filter;
     }
 
     /**
@@ -54,7 +54,7 @@ class RobopointConsumerRecovery implements ConsumerRecoveryInterface {
      */
     public function hasRecoveryData() {
         $content = $this->getRecoveryFileContent();
-        return isset($content[$this->streamName][$this->roboId][$this->filterClass]);
+        return isset($content[$this->streamName][$this->roboId][$this->filter]);
     }
 
     /**
@@ -63,8 +63,8 @@ class RobopointConsumerRecovery implements ConsumerRecoveryInterface {
     public function getLastSequenceNumber($shard_id) {
         $content = $this->getRecoveryFileContent();
 
-        if (isset($content[$this->streamName][$this->roboId][$this->filterClass][$shard_id])) {
-            return $content[$this->streamName][$this->roboId][$this->filterClass][$shard_id];
+        if (isset($content[$this->streamName][$this->roboId][$this->filter][$shard_id])) {
+            return $content[$this->streamName][$this->roboId][$this->filter][$shard_id];
         }
 
         return NULL;
@@ -75,7 +75,7 @@ class RobopointConsumerRecovery implements ConsumerRecoveryInterface {
      */
     public function storeLastSuccessPosition($shard_id, $sequence_number) {
         $content = $this->getRecoveryFileContent();
-        $content[$this->streamName][$this->roboId][$this->filterClass][$shard_id] = $sequence_number;
+        $content[$this->streamName][$this->roboId][$this->filter][$shard_id] = $sequence_number;
 
         $write_result = file_put_contents($this->consumerRecoveryFile, json_encode($content));
 

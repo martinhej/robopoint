@@ -193,7 +193,7 @@ class MessageController extends Controller
     public function getActionReadByPurpose($roboId, $purpose)
     {
         $filter = new FilterByPurpose($purpose);
-        $messages = $this->readMessages($roboId, $filter);
+        $messages = $this->readMessages($roboId, $filter, $purpose);
         return $this->getReadJsonResponse($messages);
     }
 
@@ -226,7 +226,7 @@ class MessageController extends Controller
         $filter = new FilterByPurpose($purpose);
 
         do {
-            $messages = $this->readMessages($roboId, $filter);
+            $messages = $this->readMessages($roboId, $filter, $purpose);
         }
         while ($this->getLag() > 0);
 
@@ -258,11 +258,16 @@ class MessageController extends Controller
      *
      * @param string $roboId
      * @param FilterInterface $filter
+     * @param string $consumer_recovery_offset
      *
      * @return MessageInterface[]
      */
-    protected function readMessages($roboId, FilterInterface $filter)
+    protected function readMessages($roboId, FilterInterface $filter, $consumer_recovery_offset = NULL)
     {
+
+        if (empty($consumer_recovery_offset)) {
+            $consumer_recovery_offset = get_class($filter);
+        }
 
         $transformer = new KeepOriginalTransformer();
         $this->getEventDispatcher()->addSubscriber(new DefaultProcessor($filter, $transformer, $this->getBackend()));
@@ -277,7 +282,7 @@ class MessageController extends Controller
                 $this->config['stream_name'],
                 $this->config['kinesis']['consumer']['recovery_file'],
                 $roboId,
-                get_class($filter)
+                $consumer_recovery_offset
             )
         );
 
