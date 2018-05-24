@@ -25,6 +25,7 @@ use robopoint\Kinesis\Client\RobopointConsumerRecovery;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\Route;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\Method;
 use Symfony\Bundle\FrameworkBundle\Controller\Controller;
+use Symfony\Component\Cache\Simple\FilesystemCache;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\EventDispatcher\EventDispatcher;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -75,6 +76,11 @@ class MessageController extends Controller
     protected $errors = [];
 
     /**
+     * @var FilesystemCache
+     */
+    protected $cache;
+
+    /**
      * MessageController constructor.
      *
      * @param LoggerInterface $logger
@@ -93,6 +99,7 @@ class MessageController extends Controller
         $this->eventDispatcher->addSubscriber(new MessageSchemaValidator($this->config['message_schema_dir']));
 
         $this->backend = new KeepInMemoryBackend();
+        $this->cache = new FilesystemCache();
     }
 
     /**
@@ -118,7 +125,8 @@ class MessageController extends Controller
             $this->getKinesisClient('producer'),
             $this->config['stream_name'],
             $this->getMessageFactory(),
-            $this->getEventDispatcher()
+            $this->getEventDispatcher(),
+            $this->cache
         );
 
         $response = [];
@@ -278,6 +286,7 @@ class MessageController extends Controller
             $this->config['stream_name'],
             $this->getMessageFactory(),
             $this->getEventDispatcher(),
+            $this->cache,
             new RobopointConsumerRecovery(
                 $this->config['stream_name'],
                 $this->config['kinesis']['consumer']['recovery_file'],
