@@ -31,6 +31,9 @@ use Symfony\Component\EventDispatcher\EventDispatcher;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Serializer\Encoder\CsvEncoder;
+use Symfony\Component\Serializer\Normalizer\ObjectNormalizer;
+use Symfony\Component\Serializer\Serializer;
 
 /**
  * @Route ("/api/v1/messages")
@@ -206,6 +209,63 @@ class MessageController extends Controller
     }
 
     /**
+     * @Route("/{roboId}/read-by-purpose/{purpose}/last")
+     * @Method("GET")
+     *
+     * @param string $roboId
+     * @param string $purpose
+     *
+     * @return JsonResponse
+     */
+    public function getActionReadByPurposeLast($roboId, $purpose)
+    {
+        $filter = new FilterByPurpose($purpose);
+
+        do {
+            $messages = $this->readMessages($roboId, $filter, $purpose);
+        }
+        while ($this->getLag() > 0);
+
+        return $this->getReadJsonResponse($messages);
+    }
+
+    /**
+     * @Route("/{roboId}/read-by-purpose/{purpose}/last/csv")
+     * @Method("GET")
+     *
+     * @param string $roboId
+     * @param string $purpose
+     *
+     * @return Response
+     */
+    public function getActionReadByPurposeLastCsv($roboId, $purpose)
+    {
+        $filter = new FilterByPurpose($purpose);
+
+        do {
+            $messages = $this->readMessages($roboId, $filter, $purpose);
+        }
+        while ($this->getLag() > 0);
+
+        if (!empty($this->errors['critical'])) {
+            return new Response('System error.', 500);
+        }
+        elseif (!empty($this->errors['user'])) {
+            return new Response(implode(' | ', $this->errors['user']), 400);
+        }
+
+        $content = '';
+
+        if (!empty($messages)) {
+            $message = array_pop($messages);
+            $serializer = new Serializer([new ObjectNormalizer()], [new CsvEncoder()]);
+            $content = $serializer->encode($message->getData(), 'csv');
+        }
+
+        return new Response($content);
+    }
+
+    /**
      * @Route("/{roboId}/read-from")
      * @Method("GET")
      *
@@ -238,7 +298,7 @@ class MessageController extends Controller
         }
         while ($this->getLag() > 0);
 
-        $response = '';
+        $content = '';
 
         if (!empty($messages)) {
             $message = array_pop($messages);
@@ -247,7 +307,7 @@ class MessageController extends Controller
                 return new Response('The provided property "' . $property . '" was not found.', 400);
             }
 
-            $response = $data[$property];
+            $content = $data[$property];
         }
 
         if (!empty($this->errors['critical'])) {
@@ -257,7 +317,7 @@ class MessageController extends Controller
             return new Response(implode(' | ', $this->errors['user']), 400);
         }
 
-        return new Response($response);
+        return new Response($content);
 
     }
 
@@ -296,7 +356,7 @@ class MessageController extends Controller
         );
 
         try {
-            $consumer->consume(0);
+            $consumer->consume(0, 2);
         }
         catch (ShardInitiationException $e) {
             $this->logger->critical($e->getMessage(), ['exception' => $e]);
