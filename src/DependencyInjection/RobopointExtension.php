@@ -6,8 +6,16 @@ use Symfony\Component\Config\Definition\Processor;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Extension\Extension;
 
+/**
+ * Class RobopointExtension.
+ *
+ * @package robopoint\DependencyInjection
+ */
 class RobopointExtension extends Extension {
 
+    /**
+     * {@inheritdoc}
+     */
     public function load(array $configs, ContainerBuilder $container)
     {
         $configuration = new Configuration();
@@ -16,6 +24,9 @@ class RobopointExtension extends Extension {
         $container->setParameter('robopoint', $config);
     }
 
+    /**
+     * {@inheritdoc}
+     */
     public function getAlias()
     {
         return 'robopoint';

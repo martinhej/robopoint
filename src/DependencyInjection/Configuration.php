@@ -13,6 +13,9 @@ use Symfony\Component\Config\Definition\ConfigurationInterface;
  */
 class Configuration implements ConfigurationInterface {
 
+    /**
+     * @return TreeBuilder
+     */
     public function getConfigTreeBuilder()
     {
         $treeBuilder = new TreeBuilder();
@@ -31,6 +34,11 @@ class Configuration implements ConfigurationInterface {
         return $treeBuilder;
     }
 
+    /**
+     * Adds Kinesis configuration.
+     *
+     * @param ArrayNodeDefinition $rootNode
+     */
     protected function addKinesisConfiguration(ArrayNodeDefinition $rootNode) {
         $rootNode->children()
             ->arrayNode('kinesis')
@@ -55,6 +63,11 @@ class Configuration implements ConfigurationInterface {
         ->end();
     }
 
+    /**
+     * Adds DynamoDb configuration.
+     *
+     * @param ArrayNodeDefinition $rootNode
+     */
     protected function addDynamoDBConfiguration(ArrayNodeDefinition $rootNode) {
         $rootNode->children()
             ->arrayNode('dynamodb')

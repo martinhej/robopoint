@@ -106,6 +106,10 @@ class MessageController extends Controller
     }
 
     /**
+     * Endpoint to create messages.
+     *
+     * For the data structure to be sent see the robocloud/schema.
+     *
      * @Route("/")
      * @Method("POST")
      *
@@ -193,6 +197,8 @@ class MessageController extends Controller
     }
 
     /**
+     * Reads messages filtered by the purpose.
+     *
      * @Route("/{roboId}/read-by-purpose/{purpose}")
      * @Method("GET")
      *
@@ -209,6 +215,8 @@ class MessageController extends Controller
     }
 
     /**
+     * Gets the last message with the given purpose.
+     *
      * @Route("/{roboId}/read-by-purpose/{purpose}/last")
      * @Method("GET")
      *
@@ -230,6 +238,8 @@ class MessageController extends Controller
     }
 
     /**
+     * Gets the last message in CSV format.
+     *
      * @Route("/{roboId}/read-by-purpose/{purpose}/last/csv")
      * @Method("GET")
      *
@@ -266,6 +276,8 @@ class MessageController extends Controller
     }
 
     /**
+     * Read messages from a specific robot.
+     *
      * @Route("/{roboId}/read-from")
      * @Method("GET")
      *
@@ -281,6 +293,14 @@ class MessageController extends Controller
     }
 
     /**
+     * Gets message property value of the last message for given purpose.
+     *
+     * Endpoint meant for simple devices for which it is too complicated
+     * to parse JSON and/or to traverse the messages structure.
+     *
+     * Note that this endpoint is able to return only simple string values
+     * otherwise it will return 400 error.
+     *
      * @Route("/{roboId}/read-by-purpose/{purpose}/last/get-property/{property}")
      * @Method("GET")
      *
@@ -307,6 +327,10 @@ class MessageController extends Controller
                 return new Response('The provided property "' . $property . '" was not found.', 400);
             }
 
+            if (!is_scalar($data[$property])) {
+                return new Response('The requested structure cannot be output as simple string value', 400);
+            }
+
             $content = $data[$property];
         }
 
@@ -322,7 +346,7 @@ class MessageController extends Controller
     }
 
     /**
-     * Gets consumer to load messages from Kinesis stream.
+     * Reads messages from stream.
      *
      * @param string $roboId
      * @param FilterInterface $filter
@@ -384,10 +408,12 @@ class MessageController extends Controller
     }
 
     /**
+     * Composes a JSON response.
+     *
      * @param array $messages
      * @return JsonResponse
      */
-    protected function getReadJsonResponse(array $messages) {
+    protected function getReadJsonResponse(array $messages): JsonResponse {
         if (!empty($this->errors['critical'])) {
             return new JsonResponse(['errors' => [
                 ['message' => 'System error.'],
