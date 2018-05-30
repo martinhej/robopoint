@@ -1,6 +1,8 @@
 {
+    "name": "martinhej/robopoint",
+    "description": "robopoint is the gateway to robocloud for simple devices.",
     "type": "project",
-    "license": "proprietary",
+    "license": "Apache-2.0",
     "minimum-stability" : "stable",
     "require": {
         "php": "^7.1.3",
